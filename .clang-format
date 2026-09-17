@@ -1,0 +1,119 @@
+BasedOnStyle: LLVM
+#访问修饰符额外缩进
+AccessModifierOffset: -4
+#注释风格
+AlignTrailingComments:
+  AlignPPAndNotPP: false
+  Kind: Always
+  OverEmptyLines: 0
+#从不将函数合并到一行
+AllowShortFunctionsOnASingleLine: None
+#数组不换行
+BreakArrays: false
+#控制单个大括号包裹情况
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterExternBlock: true
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+#不在相邻的字符串文字之间添加换行
+BreakAdjacentStringLiterals: false
+#在冒号和逗号之后中断构造函数初始化程序
+BreakConstructorInitializers: AfterColon
+#仅在逗号之后中断继承列表
+BreakInheritanceList: AfterComma
+#无列限制
+ColumnLimit: 2048
+#@->描述具有特殊含义的注释的正则表达式，这些注释不应拆分成行或以其他方式更改
+CommentPragmas: '^ IWYU pragma:'
+#空格分割括号列表
+Cpp11BracedListStyle: Block
+#智能识别指针与引用的声明方式，并设置为右侧
+DerivePointerAlignment: true
+PointerAlignment: Right
+ReferenceAlignment: Pointer
+#删除访问修饰符前后空行
+EmptyLineAfterAccessModifier: Never
+EmptyLineBeforeAccessModifier: Never
+#incldue分组排序
+IncludeBlocks: Regroup
+#@->用于对include进行排序的不同include类别的正则表达式
+IncludeCategories:
+  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
+    Priority:        2
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
+    Priority:        3
+    SortPriority:    0
+    CaseSensitive:   false
+  - Regex:           '.*'
+    Priority:        1
+    SortPriority:    0
+    CaseSensitive:   false
+#@->指定文件到main包含映射中允许的后缀的正则表达式
+IncludeIsMainRegex: '(Test)?$'
+#@->指定要格式化的文件的正则表达式，这些文件允许被视为文件到 main 包含映射中的main
+IncludeIsMainSourceRegex: ''
+#缩进switch的case
+IndentCaseLabels: true
+#缩进距离4
+IndentWidth: 4
+#Lambda主体相对于包含Lambda签名的父作用域缩进一个额外级别
+LambdaBodyIndentation: OuterScope
+#ObjC不重要
+ObjCBlockIndentWidth: 4
+ObjCBreakBeforeNestedBlockParam: false
+ObjCSpaceAfterProperty: true
+#@->自定义单行格式化忽略标记的正则表达式
+OneLineFormatOffRegex: ''
+#不允许重新粘合注释
+ReflowComments: false
+#所有namespace均有结尾标记
+ShortNamespaceLines: 0
+#模版变量后无空格
+SpaceAfterTemplateKeyword: false
+#大括号初始化前存在空格
+SpaceBeforeCpp11BracedList: true
+#构造函数冒号前无空格
+SpaceBeforeCtorInitializerColon: false
+#类继承冒号前无空格
+SpaceBeforeInheritanceColon: false
+#尾随行注释(// - 注释)之前放置的空格数
+SpacesBeforeTrailingComments: 1
+#控制每个左括号前的空格
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements: true
+  AfterForeachMacros: true
+  AfterFunctionDeclarationName: false
+  AfterFunctionDefinitionName: false
+  AfterIfMacros: true
+  AfterNot: false
+  AfterOverloadedOperator: false
+  AfterPlacementOperator: true
+  AfterRequiresInClause: false
+  AfterRequiresInExpression: false
+  BeforeNonEmptyParentheses: false
+#不操作模版内空格
+SpacesInAngles: Never
+#容器文字(例如数组和字典文字)内部不插入空格
+SpacesInContainerLiterals: false
+#在行注释的开头允许多少个空格
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: -1
