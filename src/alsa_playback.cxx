@@ -1,13 +1,16 @@
 #pragma once
 #include <alsa/asoundlib.h>
+#include <atomic>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <ostream>
 #include <string>
+#include <thread>
 #include <unistd.h>
+#include <vector>
 #include "public_lib.cxx"
 
 /*! xrun 恢复函数 */
@@ -35,7 +38,7 @@ static int xrun_recovery(snd_pcm_t *handle, int err)
 }
 
 /*! ALSA 播放类 */
-class AlsaPlayback
+class AlsaPlayback: public std::enable_shared_from_this<AlsaPlayback>
 {
 private:
     int err;
@@ -48,6 +51,7 @@ private:
     unsigned long int period_size;
     bool device_opened;
     bool params_filled;
+    void _playback();
 public:
     AlsaPlayback(const std::string &device);
     ~AlsaPlayback();
@@ -89,6 +93,7 @@ void AlsaPlayback::close()
     device_opened = false;
     params_filled = false;
     std::cout << "[INFO - Playback] AlsaPlayback destroyed! " << std::endl;
+    playback_thread_exit.store(true, std::memory_order_release);
 }
 
 /*! 设置参数 */
@@ -173,6 +178,13 @@ void AlsaPlayback::set_params(const PCM_INFO &_pcm_info)
 /*! 播放音乐 */
 void AlsaPlayback::playback()
 {
+    std::shared_ptr<AlsaPlayback> self = shared_from_this();
+    std::thread([self]() {
+        self->_playback();
+    }).detach();
+}
+void AlsaPlayback::_playback()
+{
     // 检查准备情况
     if (!device_opened) {
         std::cerr << "[ERROR - Playback] Try to play, but the device didn't opened!" << std::endl;
@@ -183,49 +195,34 @@ void AlsaPlayback::playback()
         return;
     }
 
-    // 每一个采样占用字节大小
-    uint8_t sample_size;
-    switch (pcm_info.format) {
-        case SND_PCM_FORMAT_S8:
-            sample_size = 1;
-            break;
-        case SND_PCM_FORMAT_S16_LE:
-            sample_size = 2;
-            break;
-        case SND_PCM_FORMAT_S24_3LE:
-            sample_size = 3;
-            break;
-        case SND_PCM_FORMAT_S24_LE:
-        case SND_PCM_FORMAT_S32_LE:
-            sample_size = 4;
-            break;
-        default:
-            std::cerr << "Unfit format! " << std::endl;
-            close();
-            return;
-    }
-
     // 输出当前 buffer 与 peroid
     std::cout << "[INFO - Playback] Buffer size: " << buffer_size << " frames. " << std::endl;
     std::cout << "[INFO - Playback] Period size: " << period_size << " frames. " << std::endl;
 
     // 获取单帧大小
-    unsigned long frame_size = snd_pcm_format_physical_width(pcm_info.format) * pcm_info.channels;
+    unsigned long frame_size = snd_pcm_format_physical_width(pcm_info.format) * pcm_info.channels / 8;
 
     bool started = false;
     while (true) {
-        // 从流处理线程获取指针，否则等待 20ms
-        char *pcm_buf = nullptr;
-        stream2playback.pop(pcm_buf);
-        if (!pcm_buf) {
+        // 接收控制线程信号并退出
+        if (playback_thread_signal_exit.load(std::memory_order_acquire)) {
+            break;
+        }
+
+        // 从流处理线程获取数据，否则等待 20ms
+        std::vector<char> pcm_buf;
+        size_t r = Stream2Playback::read_index.load(std::memory_order_relaxed);
+        while (r == Stream2Playback::write_index.load(std::memory_order_acquire)) {
             usleep(20'000);
             continue;
         }
+        pcm_buf = Stream2Playback::buffer[r & 3];
+        Stream2Playback::read_index.store(r + 1, std::memory_order_release);
 
         snd_pcm_uframes_t writed_frames = 0;
         const snd_pcm_channel_area_t *areas;
         snd_pcm_uframes_t offset;
-        snd_pcm_uframes_t frames = buffer_size;
+        snd_pcm_uframes_t frames = period_size;
         while (writed_frames < frames) {
             // 处理播放前的状态
             snd_pcm_state_t state = snd_pcm_state(handle);
@@ -263,14 +260,15 @@ void AlsaPlayback::playback()
             }
 
             // 读取 pcm 到映射内存
-            snd_pcm_uframes_t to_write = avail;
+            snd_pcm_uframes_t to_write = std::min((unsigned long)avail, period_size);
             snd_pcm_mmap_begin(handle, &areas, &offset, &to_write);
             if (to_write == 0) {
-                std::cerr << "[ERROR - Playback] No frames!" << std::endl;
+                std::cerr << "[ERROR - Playback] No frames aviable!" << std::endl;
+                usleep(200'000);
                 continue;
             }
             char *mmap_buf = (char *)areas[0].addr + offset * frame_size;
-            memcpy(mmap_buf, pcm_buf + writed_frames * frame_size, to_write * frame_size);
+            memcpy(mmap_buf, pcm_buf.data() + writed_frames * frame_size, to_write * frame_size);
             snd_pcm_mmap_commit(handle, offset, to_write);
 
             // 仅需启动一次
@@ -283,13 +281,26 @@ void AlsaPlayback::playback()
                 }
                 started = true;
             }
+
             writed_frames += to_write;
         }
     }
+    close();
+    std::cout << "[INFO - Playback] Exited successfully. " << std::endl;
+    playback_thread_exit.store(true, std::memory_order_release);
 }
 
 /*! 向流处理进程返回 period size */
 std::size_t AlsaPlayback::get_period_size()
 {
-    return period_size * snd_pcm_format_physical_width(pcm_info.format) * pcm_info.channels;
+    // 检查准备情况
+    if (!device_opened) {
+        std::cerr << "[ERROR - Playback] Try to get peroid size, but the device didn't opened!" << std::endl;
+        return 0;
+    }
+    if (!params_filled) {
+        std::cerr << "[ERROR - Playback] Try to get peroid size, but params didn't filled!" << std::endl;
+        return 0;
+    }
+    return period_size * snd_pcm_format_physical_width(pcm_info.format) * pcm_info.channels / 8;
 }

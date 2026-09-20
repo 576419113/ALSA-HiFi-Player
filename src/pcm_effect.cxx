@@ -1,7 +1,10 @@
 #pragma once
 #include <alsa/asoundlib.h>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
+#include <vector>
 #include "public_lib.cxx"
 
 /*! 对 buffer 平滑进入 */
@@ -182,4 +185,16 @@ void effect_smooth_out(PCM_INFO pcm_info, unsigned long buffer_size, char *pcm_b
             processed_frames += 1;
         }
     }
+}
+
+/*! s16le 转换为 s32le，这里 pcm_buf 占容器一半大小(size) */
+void super_s16le(char *pcm_buf, std::size_t size)
+{
+    std::vector<char> result(size * 2, 0);
+    int16_t *s16_ptr = reinterpret_cast<int16_t *>(pcm_buf);
+    int32_t *s32_ptr = reinterpret_cast<int32_t *>(result.data());
+    for (std::size_t i = 0; i < size / 4; i += 1) {
+        s32_ptr[i] = static_cast<int32_t>(s16_ptr[i]) << 16;
+    }
+    std::memcpy(pcm_buf, result.data(), size * 2);
 }

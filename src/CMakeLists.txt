@@ -1,4 +1,4 @@
-add_library(SPSCAtomic spsc_stomic.cxx)
+add_library(SPSCAtomic spsc_atomic.cxx)
 add_library(AlsaPlayback alsa_playback.cxx)
 add_library(PCMEffect pcm_effect.cxx)
 add_library(PUBLIC_LIB public_lib.cxx)
