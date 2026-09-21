@@ -13,8 +13,6 @@ bool static sigint = false;
 void signalExit(int signum)
 {
     std::cout << "[Info - System] Recived SIGINT, send shutdown signal to other threads. " << std::endl;
-    control2stream.push(StreamControl::Shutdown);
-    playback_thread_signal_exit.store(true, std::memory_order_release);
     sigint = true;
 }
 

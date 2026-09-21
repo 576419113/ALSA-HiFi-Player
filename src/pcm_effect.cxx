@@ -194,7 +194,7 @@ void super_s16le(char *pcm_buf, std::size_t size)
     int16_t *s16_ptr = reinterpret_cast<int16_t *>(pcm_buf);
     int32_t *s32_ptr = reinterpret_cast<int32_t *>(result.data());
     for (std::size_t i = 0; i < size / 4; i += 1) {
-        s32_ptr[i] = static_cast<int32_t>(s16_ptr[i]) << 16;
+        s32_ptr[i] = (static_cast<int32_t>(s16_ptr[i]) << 16);
     }
     std::memcpy(pcm_buf, result.data(), size * 2);
 }

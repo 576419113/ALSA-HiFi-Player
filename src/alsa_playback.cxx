@@ -3,7 +3,6 @@
 #include <atomic>
 #include <cstddef>
 #include <cstring>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <ostream>
@@ -46,7 +45,6 @@ private:
     snd_pcm_hw_params_t *params;
     void close();
     PCM_INFO pcm_info;
-    std::ifstream audio_file;
     unsigned long int buffer_size;
     unsigned long int period_size;
     bool device_opened;
@@ -86,9 +84,6 @@ void AlsaPlayback::close()
         snd_pcm_hw_free(handle);
         snd_pcm_close(handle);
         handle = nullptr;
-    }
-    if (audio_file.is_open()) {
-        audio_file.close();
     }
     device_opened = false;
     params_filled = false;
@@ -210,14 +205,12 @@ void AlsaPlayback::_playback()
         }
 
         // 从流处理线程获取数据，否则等待 20ms
-        std::vector<char> pcm_buf;
         size_t r = Stream2Playback::read_index.load(std::memory_order_relaxed);
         while (r == Stream2Playback::write_index.load(std::memory_order_acquire)) {
             usleep(20'000);
             continue;
         }
-        pcm_buf = Stream2Playback::buffer[r & 3];
-        Stream2Playback::read_index.store(r + 1, std::memory_order_release);
+        std::vector<char> &pcm_buf = Stream2Playback::buffer[r & 3];
 
         snd_pcm_uframes_t writed_frames = 0;
         const snd_pcm_channel_area_t *areas;
@@ -284,6 +277,9 @@ void AlsaPlayback::_playback()
 
             writed_frames += to_write;
         }
+
+        // 释放原子锁
+        Stream2Playback::read_index.store(r + 1, std::memory_order_release);
     }
     close();
     std::cout << "[INFO - Playback] Exited successfully. " << std::endl;

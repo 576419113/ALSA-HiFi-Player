@@ -127,6 +127,7 @@ void PCMStream::_stream_process()
         Stream2Playback::write_index.store(w + 1, std::memory_order_release);
         if (audio_file.gcount() < period_size) {
             std::cout << "[INFO - Stream Process] Signle loop. " << std::endl;
+            audio_file.clear();
             audio_file.seekg(0, std::ios::beg);
         }
     }
