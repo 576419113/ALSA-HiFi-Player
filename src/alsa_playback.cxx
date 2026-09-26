@@ -9,7 +9,6 @@
 #include <string>
 #include <thread>
 #include <unistd.h>
-#include <vector>
 #include "public_lib.cxx"
 
 /*! xrun 恢复函数 */
@@ -205,12 +204,12 @@ void AlsaPlayback::_playback()
         }
 
         // 从流处理线程获取数据，否则等待 20ms
-        size_t r = Stream2Playback::read_index.load(std::memory_order_relaxed);
+        std::size_t r = Stream2Playback::read_index.load(std::memory_order_relaxed);
         while (r == Stream2Playback::write_index.load(std::memory_order_acquire)) {
             usleep(20'000);
             continue;
         }
-        std::vector<char> &pcm_buf = Stream2Playback::buffer[r & 3];
+        char *&pcm_buf = Stream2Playback::buffer[r & 3];
 
         snd_pcm_uframes_t writed_frames = 0;
         const snd_pcm_channel_area_t *areas;
@@ -261,7 +260,7 @@ void AlsaPlayback::_playback()
                 continue;
             }
             char *mmap_buf = (char *)areas[0].addr + offset * frame_size;
-            memcpy(mmap_buf, pcm_buf.data() + writed_frames * frame_size, to_write * frame_size);
+            memcpy(mmap_buf, pcm_buf + writed_frames * frame_size, to_write * frame_size);
             snd_pcm_mmap_commit(handle, offset, to_write);
 
             // 仅需启动一次

@@ -1,8 +1,11 @@
 #pragma once
 #include <alsa/asoundlib.h>
 #include <atomic>
-#include <vector>
 #include "spsc_atomic.cxx"
+#include "memory_pool.cxx"
+
+// 内存池
+MemoryPool memory_pool;
 
 // 主线程向流处理线程发送的控制序列
 enum class StreamControl { Nothing, Start, Play, Pause, Stop, Shutdown };
@@ -12,8 +15,7 @@ namespace Stream2Playback
 {
 alignas(64) std::atomic<size_t> write_index { 0 };
 alignas(64) std::atomic<size_t> read_index { 0 };
-std::atomic<bool> buffer_size_changed = false;
-std::vector<std::vector<char>> buffer(4);
+std::vector<char *> buffer(4);
 }
 
 // 主线程确认流处理线程结束

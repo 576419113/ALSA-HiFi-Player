@@ -1,12 +1,14 @@
-#include <atomic>
-#include <cstdlib>
-#include <iostream>
-#include <csignal>
-#include <memory>
-#include <unistd.h>
 #include "alsa_playback.cxx"
 #include "pcm_stream.cxx"
 #include "public_lib.cxx"
+
+#include <alsa/asoundlib.h>
+#include <atomic>
+#include <csignal>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <unistd.h>
 
 bool static sigint = false;
 
@@ -22,7 +24,8 @@ int main()
     PCM_INFO pcm_info { 44100, 2, SND_PCM_FORMAT_S32_LE };
     playback->set_params(pcm_info);
     auto pcm_stream = std::make_shared<PCMStream>();
-    pcm_stream->load_pcm("audio/audio.pcm", playback->get_period_size());
+    std::size_t period_size = playback->get_period_size();
+    pcm_stream->load_pcm("audio/audio_s16le.pcm", period_size, SND_PCM_FORMAT_S32_LE);
     pcm_stream->stream_process();
     playback->playback();
 
@@ -43,9 +46,8 @@ int main()
             control2stream.push(StreamControl::Play);
         } else if (input == "pause") {
             control2stream.push(StreamControl::Pause);
-        } else if (input == "stop") {
+        } else if (input == "_stop_test") { // 目前请不要使用此控制
             control2stream.push(StreamControl::Stop);
-            break;
         } else if (input == "shutdown") {
             goto end;
         } else {
@@ -53,20 +55,28 @@ int main()
         }
     }
 end:
-    // 等待播放线程结束
-    std::cout << "[INFO - System] Wait for playback exit. " << std::endl;
-    playback_thread_signal_exit.store(true, std::memory_order_release);
-    while (!playback_thread_exit.load(std::memory_order_acquire)) {
-        usleep(200'000);
-    }
     // 等待流处理线程结束
-    std::cout << "[INFO - System] Wait for stream process exit. " << std::endl;
-    size_t r = Stream2Playback::read_index.load(std::memory_order_relaxed);
-    size_t w = Stream2Playback::write_index.load(std::memory_order_acquire);
-    Stream2Playback::read_index.store(w, std::memory_order_release);
     control2stream.push(StreamControl::Shutdown);
+    std::cout << "[INFO - System] Wait for stream process exit. " << std::endl;
     while (!stream_process_thread_exit.load(std::memory_order_acquire)) {
         usleep(200'000);
     }
+    // 等待播放线程结束
+    std::cout << "[INFO - System] Wait for playback exit. " << std::endl;
+    playback_thread_signal_exit.store(true, std::memory_order_release);
+    for (int i = 0; i < 2; i++) {
+        size_t w = Stream2Playback::write_index.load(std::memory_order_relaxed);
+        while (w - Stream2Playback::read_index.load(std::memory_order_acquire) == 4) {
+            // 缓冲区满，等待 20ms
+            usleep(20'000);
+            continue;
+        }
+        std::fill(Stream2Playback::buffer[w & 3], Stream2Playback::buffer[w & 3] + period_size, 0);
+        Stream2Playback::write_index.store(w + 1, std::memory_order_release);
+    }
+    while (!playback_thread_exit.load(std::memory_order_acquire)) {
+        usleep(200'000);
+    }
+
     return 0;
 }
