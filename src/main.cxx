@@ -25,7 +25,7 @@ int main()
     playback->set_params(pcm_info);
     auto pcm_stream = std::make_shared<PCMStream>();
     std::size_t period_size = playback->get_period_size();
-    pcm_stream->load_pcm("audio/audio_s16le.pcm", period_size, SND_PCM_FORMAT_S32_LE);
+    pcm_stream->load_pcm("audio/audio_s32le.pcm", period_size, SND_PCM_FORMAT_S32_LE);
     pcm_stream->stream_process();
     playback->playback();
 
@@ -34,7 +34,7 @@ int main()
     signal(SIGINT, signalExit);
     while (true) {
         if (sigint) {
-            break;
+            goto end;
         }
         std::cin >> input;
         if (input.empty()) {
@@ -61,10 +61,11 @@ end:
     while (!stream_process_thread_exit.load(std::memory_order_acquire)) {
         usleep(200'000);
     }
+
+    playback_thread_signal_exit.store(true, std::memory_order_release);
     // 等待播放线程结束
     std::cout << "[INFO - System] Wait for playback exit. " << std::endl;
-    playback_thread_signal_exit.store(true, std::memory_order_release);
-    for (int i = 0; i < 2; i++) {
+    while (!playback_thread_exit.load(std::memory_order_acquire)) {
         size_t w = Stream2Playback::write_index.load(std::memory_order_relaxed);
         while (w - Stream2Playback::read_index.load(std::memory_order_acquire) == 4) {
             // 缓冲区满，等待 20ms
@@ -73,8 +74,6 @@ end:
         }
         std::fill(Stream2Playback::buffer[w & 3], Stream2Playback::buffer[w & 3] + period_size, 0);
         Stream2Playback::write_index.store(w + 1, std::memory_order_release);
-    }
-    while (!playback_thread_exit.load(std::memory_order_acquire)) {
         usleep(200'000);
     }
 

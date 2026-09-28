@@ -39,9 +39,9 @@ char *MemoryPool::get(uint32_t width)
             return node.address;
         }
     }
-    char *result = new char[width];
-    if (!width) {
-        result = nullptr;
+    char *result = nullptr;
+    if (width) {
+        result = new char[width];
     }
     Node node(width, result, true);
     pool.push_back(std::move(node));

@@ -45,7 +45,7 @@ void effect_smooth_in(char *&pcm_buf, std::size_t width, snd_pcm_format_t format
                 int8_t val = static_cast<int8_t>(p_pcm_buf[0]);
                 double d_val = val / 128.0;
                 d_val *= in_curve(Q_start);
-                Q_start += Q_step;
+                //Q_start += Q_step;
                 val = 128 * d_val;
                 std::memcpy(p_result, &val, 1);
                 p_result += 1;
@@ -57,7 +57,7 @@ void effect_smooth_in(char *&pcm_buf, std::size_t width, snd_pcm_format_t format
                 int16_t val = static_cast<int16_t>(p_pcm_buf[0] | p_pcm_buf[1] << 8);
                 double d_val = val / 32768.0;
                 d_val *= in_curve(Q_start);
-                Q_start += Q_step;
+                //Q_start += Q_step;
                 val = 32768 * d_val;
                 std::memcpy(p_result, &val, 2);
                 p_result += 2;
@@ -69,7 +69,7 @@ void effect_smooth_in(char *&pcm_buf, std::size_t width, snd_pcm_format_t format
                 int32_t temp = static_cast<int32_t>(p_pcm_buf[0] << 8 | (p_pcm_buf[1] << 16) | (p_pcm_buf[2] << 24));
                 double d_val = temp / 2147483648.0;
                 d_val *= in_curve(Q_start);
-                Q_start += Q_step;
+                //Q_start += Q_step;
                 temp = 2147483648.0 * d_val;
                 uint32_t val = (temp << 8) >> 8;
                 std::memcpy(p_result, &val, 3);
@@ -83,7 +83,7 @@ void effect_smooth_in(char *&pcm_buf, std::size_t width, snd_pcm_format_t format
                     int32_t temp = static_cast<int32_t>(p_pcm_buf[0] << 8 | (p_pcm_buf[1] << 16) | (p_pcm_buf[2] << 24));
                     double d_val = temp / 2147483648.0;
                     d_val *= in_curve(Q_start);
-                    Q_start += Q_step;
+                    //Q_start += Q_step;
                     temp = 2147483648.0 * d_val;
                     uint32_t val = (temp << 8) >> 8;
                     std::memcpy(p_result, &val, 4);
@@ -95,7 +95,7 @@ void effect_smooth_in(char *&pcm_buf, std::size_t width, snd_pcm_format_t format
                     int32_t val = p_pcm_buf[0] | (p_pcm_buf[1] << 8) | (p_pcm_buf[2] << 16) | (p_pcm_buf[3] << 24);
                     double d_val = val / 2147483648.0;
                     d_val *= in_curve(Q_start);
-                    Q_start += Q_step;
+                    //Q_start += Q_step;
                     val = 8388608 * d_val;
                     std::memcpy(p_result, &val, 4);
                     p_result += 4;
@@ -142,7 +142,7 @@ void effect_smooth_out(char *&pcm_buf, std::size_t width, snd_pcm_format_t forma
                 int8_t val = static_cast<int8_t>(p_pcm_buf[0]);
                 double d_val = val / 128.0;
                 d_val *= out_curve(Q_start);
-                Q_start -= Q_step;
+                //Q_start -= Q_step;
                 val = 128 * d_val;
                 std::memcpy(p_result, &val, 1);
                 p_result += 1;
@@ -154,7 +154,7 @@ void effect_smooth_out(char *&pcm_buf, std::size_t width, snd_pcm_format_t forma
                 int16_t val = static_cast<int16_t>(p_pcm_buf[0] | p_pcm_buf[1] << 8);
                 double d_val = val / 32768.0;
                 d_val *= out_curve(Q_start);
-                Q_start -= Q_step;
+                //Q_start -= Q_step;
                 val = 32768 * d_val;
                 std::memcpy(p_result, &val, 2);
                 p_result += 2;
@@ -166,7 +166,7 @@ void effect_smooth_out(char *&pcm_buf, std::size_t width, snd_pcm_format_t forma
                 int32_t temp = static_cast<int32_t>(p_pcm_buf[0] << 8 | (p_pcm_buf[1] << 16) | (p_pcm_buf[2] << 24));
                 double d_val = temp / 2147483648.0;
                 d_val *= out_curve(Q_start);
-                Q_start -= Q_step;
+                //Q_start -= Q_step;
                 temp = 2147483648.0 * d_val;
                 uint32_t val = (temp << 8) >> 8;
                 std::memcpy(p_result, &val, 3);
@@ -180,7 +180,7 @@ void effect_smooth_out(char *&pcm_buf, std::size_t width, snd_pcm_format_t forma
                     int32_t temp = static_cast<int32_t>(p_pcm_buf[0] << 8 | (p_pcm_buf[1] << 16) | (p_pcm_buf[2] << 24));
                     double d_val = temp / 2147483648.0;
                     d_val *= out_curve(Q_start);
-                    Q_start -= Q_step;
+                    //Q_start -= Q_step;
                     temp = 2147483648.0 * d_val;
                     uint32_t val = (temp << 8) >> 8;
                     std::memcpy(p_result, &val, 4);
@@ -192,7 +192,7 @@ void effect_smooth_out(char *&pcm_buf, std::size_t width, snd_pcm_format_t forma
                     int32_t val = p_pcm_buf[0] | (p_pcm_buf[1] << 8) | (p_pcm_buf[2] << 16) | (p_pcm_buf[3] << 24);
                     double d_val = val / 2147483648.0;
                     d_val *= out_curve(Q_start);
-                    Q_start -= Q_step;
+                    //Q_start -= Q_step;
                     val = 8388608 * d_val;
                     std::memcpy(p_result, &val, 4);
                     p_result += 4;

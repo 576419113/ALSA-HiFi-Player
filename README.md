@@ -1,4 +1,5 @@
 ## 零、TODO
+- [ ] 增加 mixer 控制，先防止启动爆音
 ## 一、播放器原理
 播放器线程：控制线程、播放线程、流读取线程。
 播放线程：alsa pcm 硬件模式、MMAP 内存映射写入。
@@ -37,3 +38,14 @@ $$
 等功率曲线：
 in  ->  $\sin p$
 out ->  $\cos p$
+### 3.Alsa 启动爆音解决
+1. 打开 mixer（Master / PCM / Headphone）
+2. 设置 volume
+3. 将 Master / PCM / Headphone 设为 MUTE
+4. snd_pcm_open()
+5. snd_pcm_set_params()
+6. snd_pcm_prepare()
+7. 写入 5~20 ms 的 0 数据（silence）
+8. msleep(10~30)  // 等 Codec/偏置稳定
+9. 解除 MUTE
+10. 开始正常写音频数据（fade-in）

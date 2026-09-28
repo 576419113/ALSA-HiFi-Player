@@ -78,10 +78,13 @@ void PCMStream::_stream_process()
     bool paused = false;      // 是否暂停
     bool file_end_test = true; // 是否判断即将到达文件末尾，并 smmooth_out
     bool shutdown_process = false; // shutdown 处理
+    // 这里一个计数大概 0.02s
     uint8_t smooth_in_count = 0; // 淡入计数
-    uint8_t smooth_in_all = 30; // 淡入总数
+    uint8_t smooth_in_all = 10; // 淡入总数
     uint8_t smooth_out_count = 0; // 淡出计数
-    uint8_t smooth_out_all = 30;  // 淡出总数
+    uint8_t smooth_out_all = 10;  // 淡出总数
+    uint8_t padding_in_count = 0; // 进入前间隔
+    uint8_t padding_in_count_all = 10;  // 进入前总间隔
     std::size_t end_padding; // 判断即将到达文件尾的标准
     while (true) {
         // 处理文件打开/切换
@@ -109,6 +112,7 @@ void PCMStream::_stream_process()
             case StreamControl::Start:
                 started = true;
                 smooth_in_count = smooth_in_all;
+                padding_in_count = padding_in_count_all;
                 std::cout << "[Info - Stream Process] Begin to play. " << std::endl;
                 break;
             case StreamControl::Play:
@@ -149,10 +153,10 @@ void PCMStream::_stream_process()
             continue;
         }
         char *&buf = Stream2Playback::buffer[w & 3];
-        if (!paused || smooth_out_count > 0) {
+        if ((!paused || smooth_out_count > 0) && padding_in_count == 0) {
             // 这里处理 16bit -> 32bit 超分
-            audio_file.read(buf, period_size / 2);
-            super_s16le(buf, period_size / 2);
+            audio_file.read(buf, period_size);
+            //super_s16le(buf, period_size / 2);
             if (smooth_in_count > 0) {
                 effect_smooth_in(buf, period_size, pcm_format, smooth_in_count, smooth_in_all);
                 smooth_in_count--;
@@ -163,6 +167,9 @@ void PCMStream::_stream_process()
             }
         } else {
             std::fill(buf, buf + period_size, 0);
+            if (padding_in_count) {
+                padding_in_count -= 1;
+            }
         }
         Stream2Playback::write_index.store(w + 1, std::memory_order_release);
 
@@ -185,6 +192,7 @@ void PCMStream::_stream_process()
             file_end_test = true;
             smooth_out_count = 0;
             smooth_in_count = smooth_in_all;
+            padding_in_count = padding_in_count_all;
         }
     }
 process_end:

@@ -40,6 +40,7 @@ class AlsaPlayback: public std::enable_shared_from_this<AlsaPlayback>
 {
 private:
     int err;
+    snd_mixer_t *mixer;
     snd_pcm_t *handle;
     snd_pcm_hw_params_t *params;
     void close();
